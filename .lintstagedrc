@@ -1,0 +1,9 @@
+{
+  "*.{js,jsx,ts,tsx,json,css,scss,md}": [
+    "prettier --write"
+  ],
+  "*.sol": [
+    "prettier --write",
+    "solhint"
+  ]
+}
