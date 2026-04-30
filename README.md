@@ -1,236 +1,127 @@
-# Lending Protocol
-
-A modular decentralized lending protocol written in **Solidity** using **Foundry**, featuring collateralized borrowing, interest rate models, and liquidation logic.
-
-This project demonstrates the architecture of a DeFi lending market where users can deposit collateral, borrow assets, repay loans, and where under-collateralized positions can be liquidated to maintain system solvency.
-
----
+# Price Oracle (Chainlink Integration)
 
 ## Overview
 
-The protocol enables:
+This project implements a multi-asset price oracle using Chainlink Data Feeds. It enables smart contracts, such as lending protocols, to fetch reliable and up-to-date price data for various assets.
 
-- Collateral deposits
-- Borrowing against collateral
-- Interest accrual on outstanding debt
-- Liquidation of unhealthy positions
-- Secure smart-contract-based lending markets
-
-The system is designed to follow best practices used in production DeFi protocols while remaining simple enough for educational exploration.
+The contract is designed with safety checks to prevent the use of invalid or stale data and provides utility functions for calculating asset values in USD.
 
 ---
 
-## Tech Stack
+## Purpose
 
-Core technologies used in this project:
+Accurate pricing is a core requirement in decentralized finance systems. This oracle is intended to support:
 
-- Solidity smart contracts
-- Foundry development framework
-- Prettier for formatting
-- Solhint for Solidity linting
-- ESLint for JavaScript/TypeScript tooling
-- Husky Git hooks
-- lint-staged for pre-commit formatting
-- pnpm package manager
+* Collateral valuation
+* Borrowing capacity calculations
+* Liquidation logic
+
+It serves as a foundational component for building DeFi protocols.
 
 ---
 
-## Project Architecture
+## Features
 
-Example structure:
-
-```
-lending-protocol/
-├── .husky/                  # Git hooks (pre-commit, pre-push, etc.)
-├── lib/                     # External dependencies, libraries, contracts
-├── src/                     # Solidity smart contracts
-├── test/                    # Foundry unit/integration tests
-├── scripts/                 # Deployment, interaction, or helper scripts
-├── .vscode/                 # VSCode editor settings (formatting, linting)
-├── .gitignore               # Ignored files (artifacts, cache, node_modules)
-├── .lintstagedrc             # Pre-commit staged file formatting rules
-├── .prettierrc               # Prettier configuration
-├── .solhint.json             # Solidity linter rules
-├── package.json              # Node dependencies & scripts (linting, formatting)
-├── foundry.toml              # Foundry project config
-├── README.md                 # Project overview & instructions
-└── CONTRIBUTING.md           # Contribution guidelines
+* Multi-asset support (ETH, BTC, USDC, USDT, LINK, DAI, AUD)
+* Integration with Chainlink decentralized price feeds
+* Stale price protection using timestamp validation
+* Validation to ensure returned prices are positive
+* Owner-controlled feed configuration
+* Utility function to compute USD value of asset amounts
 
 ---
 
-## Key Concepts
+## Contract Structure
 
-### Collateralized Lending
+### State Variables
 
-Users deposit assets as collateral and can borrow another asset against it. Borrow limits depend on collateral value and loan-to-value ratios.
-
-### Interest Rate Model
-
-Borrowed assets accumulate interest over time based on protocol-defined parameters.
-
-### Liquidation
-
-If a borrower's collateral falls below the required threshold, their position can be liquidated to protect the protocol.
+* `owner`: Address of the contract owner
+* `priceFeeds`: Mapping from asset identifier to Chainlink price feed
+* `PRECISION`: Constant used for 18-decimal normalization
+* `FEED_PRECISION`: Default Chainlink precision (1e8)
 
 ---
 
-## Installation
+## Core Functions
 
-Clone the repository:
+### `getPrice(address asset) -> uint256`
 
-```
+Fetches the latest price for a given asset.
 
-git clone https://github.com/Cohort-8-BuidL/Lending-Protocol.git
-cd Lending-Protocol
+Includes:
 
-```
-
-Install JavaScript dependencies:
-
-```
-
-pnpm install
-
-```
-
-Install Foundry (if not installed):
-
-```
-
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-
-```
+* Verification that a feed is configured
+* Validation that the price is greater than zero
+* Staleness check to ensure the data is recent
 
 ---
 
-## Development
+### `getUsdValue(address asset, uint256 amount) -> uint256`
 
-Build the contracts:
+Returns the USD value of a specified asset amount.
 
-```
-
-forge build
-
-```
-
-Run tests:
-
-```
-
-forge test
-
-```
-
-Run tests with verbose output:
-
-```
-
-forge test -vvvv
-
-```
-
-Format contracts:
-
-```
-
-forge fmt
-
-```
+Formula:
+USD Value = (price × amount × precision) / feedPrecision
 
 ---
 
-## Linting
+### `setPriceFeed(address asset, address feed)`
 
-Run JavaScript/TypeScript linting:
-
-```
-
-pnpm lint
-
-```
-
-Auto-fix issues:
-
-```
-
-pnpm lint:fix
-
-```
-
-Run Solidity linting:
-
-```
-
-pnpm solhint
-
-```
+Allows the contract owner to assign or update the price feed for an asset.
 
 ---
 
-## Formatting
+## Supported Assets (Sepolia)
 
-Format all files:
+| Asset | Identifier | Price Feed |
+| ----- | ---------- | ---------- |
+| ETH   | address(1) | ETH/USD    |
+| BTC   | address(2) | BTC/USD    |
+| USDC  | address(3) | USDC/USD   |
+| USDT  | address(4) | USDT/USD   |
+| LINK  | address(5) | LINK/USD   |
+| DAI   | address(6) | DAI/USD    |
+| AUD   | address(7) | AUD/USD    |
 
-```
-
-pnpm format
-
-```
-
-Check formatting:
-
-```
-
-pnpm format:check
-
-```
-
-Formatting is also enforced automatically through Git hooks.
+Note: `address(1)`, `address(2)`, etc. are placeholder identifiers used for testing and mapping purposes.
 
 ---
 
-## Git Hooks
+## Network
 
-This project uses **Husky** to enforce repository standards.
-
-Hooks include:
-
-* Pre-commit formatting checks
-* Pre-push branch protection
-* Lint-staged file formatting
-
-These checks ensure code quality and prevent accidental pushes to protected branches.
+* Tested on Sepolia testnet
+* Uses Chainlink price feed contracts deployed on Sepolia
 
 ---
 
-## Branch Protection
+## Usage (Remix)
 
-The `main` branch is protected.
+1. Deploy the contract using Injected Provider (MetaMask)
+2. Ensure MetaMask is connected to the Sepolia network
+3. Call functions directly from the deployed contract interface
 
-Only authorized maintainers are allowed to push directly to `main`.
+Example:
 
-All contributions must be made through pull requests.
+```solidity
+getPrice(0x0000000000000000000000000000000000000001)
+```
 
----
-
-## Contributing
-
-We welcome contributions.
-
-Please read **CONTRIBUTING.md** before opening a pull request.
+This returns the ETH/USD price.
 
 ---
 
-## Security
+## Price Format
 
-Smart contract security is critical in DeFi systems.
+Chainlink price feeds return values with 8 decimals.
 
-If you discover a vulnerability, please report it responsibly rather than opening a public issue.
+Example:
+
+* `220843000000` represents 2208.43 USD
+
+Solidity does not support floating-point numbers, so all values are handled as integers with scaling.
 
 ---
 
 ## License
 
-MIT License
-```
+MIT
