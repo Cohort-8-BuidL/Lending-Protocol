@@ -1,0 +1,47 @@
+#!/usr/bin/env sh
+. "$(dirname "$0")/_/h"
+
+# Protect the main branch from unauthorized pushes, deletions, and force pushes
+
+protected_branch='refs/heads/main'
+current_user=$(git config user.email)
+allowed_user='faitheberechiraymond@gmail.com'
+z40=0000000000000000000000000000000000000000
+
+while read local_ref local_sha remote_ref remote_sha
+do
+    if [ "$remote_ref" = "$protected_branch" ]; then
+
+        # Block any push to main from unauthorized users
+        if [ "$current_user" != "$allowed_user" ]; then
+            echo "❌ Protection Rule: Only $allowed_user can push to main."
+            echo "Current user: $current_user"
+            exit 1
+        fi
+
+        # Allow new branch creation
+        if [ "$remote_sha" = "$z40" ]; then
+            continue
+        fi
+
+        # Handle branch deletion
+        if [ "$local_sha" = "$z40" ]; then
+            if [ "$current_user" != "$allowed_user" ]; then
+                echo "❌ Protection Rule: You are not allowed to delete $protected_branch"
+                exit 1
+            fi
+            continue
+        fi
+
+        # Check if the push is a force push
+        if ! git merge-base --is-ancestor "$remote_sha" "$local_sha"; then
+            if [ "$current_user" != "$allowed_user" ]; then
+                echo "❌ Protection Rule: Force pushing to main is restricted to $allowed_user."
+                echo "Current user: $current_user"
+                exit 1
+            fi
+        fi
+    fi
+done
+
+exit 0
