@@ -15,3 +15,4 @@ interface IPriceOracle {
   /// @param asset The ERC-20 token address to price.
   /// @return priceInETH The ETH price with WAD (1e18) precision.
   function getAssetPrice(address asset) external view returns (uint256 priceInETH);
+}
