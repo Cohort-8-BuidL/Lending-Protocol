@@ -3,7 +3,25 @@ pragma solidity ^0.8.20;
 
 import {Test} from 'forge-std/Test.sol';
 
-import {LendingPoolDataProvider} from 'src/LendingPoolDataProvider.sol';
+import {
+  LendingPoolDataProvider,
+  BorrowingDisabled,
+  CollateralInsufficient,
+  HealthFactorBelowOne,
+  InsufficientLiquidity,
+  InvalidLiquidationThreshold,
+  InvalidLtv,
+  InvalidPool,
+  InvalidRateMode,
+  InvalidReserve,
+  InvalidUser,
+  OracleNotSet,
+  ReserveInactive,
+  StableBorrowingDisabled,
+  StableBorrowManipulation,
+  StaleOracle,
+  ZeroAmount
+} from 'src/LendingPoolDataProvider.sol';
 import {MockPoolLike} from 'src/mocks/MockPoolLike.sol';
 import {MockPriceOracle} from 'src/mocks/MockPriceOracle.sol';
 
@@ -46,28 +64,28 @@ contract LendingPoolDataProviderTest is Test {
 
   // === Constructor
   function test_constructor_zeroPool_reverts() external {
-    vm.expectRevert('LDP: INVALID_POOL');
+    vm.expectRevert(abi.encodeWithSelector(InvalidPool.selector));
     new LendingPoolDataProvider(MockPoolLike(address(0)));
   }
 
   // === Input validation
   function test_getUserAccountData_zeroUser_reverts() external {
-    vm.expectRevert('LDP: INVALID_USER');
+    vm.expectRevert(abi.encodeWithSelector(InvalidUser.selector));
     dp.getUserAccountData(address(0));
   }
 
   function test_getHealthFactor_zeroUser_reverts() external {
-    vm.expectRevert('LDP: INVALID_USER');
+    vm.expectRevert(abi.encodeWithSelector(InvalidUser.selector));
     dp.getHealthFactor(address(0));
   }
 
   function test_getCompoundedBorrowBalance_zeroUser_reverts() external {
-    vm.expectRevert('LDP: INVALID_USER');
+    vm.expectRevert(abi.encodeWithSelector(InvalidUser.selector));
     dp.getCompoundedBorrowBalance(address(0), ETH_ASSET);
   }
 
   function test_getCompoundedBorrowBalance_zeroReserve_reverts() external {
-    vm.expectRevert('LDP: INVALID_RESERVE');
+    vm.expectRevert(abi.encodeWithSelector(InvalidReserve.selector));
     dp.getCompoundedBorrowBalance(USER, address(0));
   }
 
@@ -80,7 +98,7 @@ contract LendingPoolDataProviderTest is Test {
     freshPool.setUserCollateralBalance(USER, ETH_ASSET, 1 ether);
 
     LendingPoolDataProvider freshDp = new LendingPoolDataProvider(freshPool);
-    vm.expectRevert('LDP: ORACLE_NOT_SET');
+    vm.expectRevert(abi.encodeWithSelector(OracleNotSet.selector));
     freshDp.getHealthFactor(USER);
   }
 
@@ -90,7 +108,7 @@ contract LendingPoolDataProviderTest is Test {
     // Set ETH price to 0 (stale).
     oracle.setAssetPrice(ETH_ASSET, 0);
 
-    vm.expectRevert('LDP: STALE_ORACLE');
+    vm.expectRevert(abi.encodeWithSelector(StaleOracle.selector, ETH_ASSET));
     dp.getHealthFactor(USER);
   }
 
@@ -101,7 +119,7 @@ contract LendingPoolDataProviderTest is Test {
     pool.setUserCompoundedBorrowBalance(USER, DAI_ASSET, 1_000e18);
     oracle.setAssetPrice(DAI_ASSET, 0);
 
-    vm.expectRevert('LDP: STALE_ORACLE');
+    vm.expectRevert(abi.encodeWithSelector(StaleOracle.selector, DAI_ASSET));
     dp.getHealthFactor(USER);
   }
 
@@ -111,7 +129,7 @@ contract LendingPoolDataProviderTest is Test {
     pool.setUserOriginationFee(USER, DAI_ASSET, 100e18);
     oracle.setAssetPrice(DAI_ASSET, 0);
 
-    vm.expectRevert('LDP: STALE_ORACLE');
+    vm.expectRevert(abi.encodeWithSelector(StaleOracle.selector, DAI_ASSET));
     dp.getHealthFactor(USER);
   }
 
@@ -254,7 +272,7 @@ contract LendingPoolDataProviderTest is Test {
     pool.setUserCollateralBalance(USER, ETH_ASSET, 1 ether);
     pool.setUserCompoundedBorrowBalance(USER, DAI_ASSET, 100e18);
 
-    vm.expectRevert('LDP: INVALID_LTV');
+    vm.expectRevert(abi.encodeWithSelector(InvalidLtv.selector, ETH_ASSET, uint256(15000)));
     dp.getHealthFactor(USER);
   }
 
@@ -264,7 +282,7 @@ contract LendingPoolDataProviderTest is Test {
     pool.setUserCollateralBalance(USER, ETH_ASSET, 1 ether);
     pool.setUserCompoundedBorrowBalance(USER, DAI_ASSET, 100e18);
 
-    vm.expectRevert('LDP: INVALID_LT');
+    vm.expectRevert(abi.encodeWithSelector(InvalidLiquidationThreshold.selector, ETH_ASSET, uint256(15000)));
     dp.getHealthFactor(USER);
   }
 
@@ -362,7 +380,7 @@ contract LendingPoolDataProviderTest is Test {
     _setupBorrowPosition();
     pool.setReserveFlags(DAI_ASSET, false, true, false);
 
-    vm.expectRevert('LDP: RESERVE_INACTIVE');
+    vm.expectRevert(abi.encodeWithSelector(ReserveInactive.selector));
     dp.validateBorrow(USER, DAI_ASSET, 100e18, VARIABLE);
   }
 
@@ -370,7 +388,7 @@ contract LendingPoolDataProviderTest is Test {
     _setupBorrowPosition();
     pool.setReserveFlags(DAI_ASSET, true, false, false);
 
-    vm.expectRevert('LDP: BORROWING_DISABLED');
+    vm.expectRevert(abi.encodeWithSelector(BorrowingDisabled.selector));
     dp.validateBorrow(USER, DAI_ASSET, 100e18, VARIABLE);
   }
 
@@ -379,7 +397,7 @@ contract LendingPoolDataProviderTest is Test {
     _setupBorrowPosition();
     // stableBorrowingEnabled = false (default from addReserve)
 
-    vm.expectRevert('LDP: STABLE_BORROWING_DISABLED');
+    vm.expectRevert(abi.encodeWithSelector(StableBorrowingDisabled.selector));
     dp.validateBorrow(USER, DAI_ASSET, 100e18, STABLE);
   }
 
@@ -394,7 +412,7 @@ contract LendingPoolDataProviderTest is Test {
     _setupBorrowPosition();
     pool.setReserveAvailableLiquidity(DAI_ASSET, 50e18); // only 50 DAI available
 
-    vm.expectRevert('LDP: INSUFFICIENT_LIQUIDITY');
+    vm.expectRevert(abi.encodeWithSelector(InsufficientLiquidity.selector));
     dp.validateBorrow(USER, DAI_ASSET, 100e18, VARIABLE);
   }
 
@@ -405,7 +423,7 @@ contract LendingPoolDataProviderTest is Test {
     // Already borrowed 6 ETH worth. Available = 1.5 ETH = 1500 DAI.
     // Trying to borrow 2000 DAI (2 ETH) — exceeds capacity.
 
-    vm.expectRevert('LDP: COLLATERAL_INSUFFICIENT');
+    vm.expectRevert(abi.encodeWithSelector(CollateralInsufficient.selector));
     dp.validateBorrow(USER, DAI_ASSET, 2_000e18, VARIABLE);
   }
 
@@ -422,7 +440,7 @@ contract LendingPoolDataProviderTest is Test {
     pool.setUserCompoundedBorrowBalance(USER, DAI_ASSET, 7_900e18);
     pool.setReserveAvailableLiquidity(DAI_ASSET, 100_000e18);
 
-    vm.expectRevert('LDP: HF_BELOW_ONE');
+    vm.expectRevert(abi.encodeWithSelector(HealthFactorBelowOne.selector));
     dp.validateBorrow(USER, DAI_ASSET, 500e18, VARIABLE);
   }
 
@@ -453,7 +471,7 @@ contract LendingPoolDataProviderTest is Test {
 
     // Tries to borrow 100 DAI (0.1 ETH) from DAI reserve while depositing
     // 5,000 DAI (5 ETH) in the same reserve — collateral > borrow amount.
-    vm.expectRevert('LDP: STABLE_BORROW_MANIPULATION');
+    vm.expectRevert(abi.encodeWithSelector(StableBorrowManipulation.selector));
     dp.validateBorrow(USER, DAI_ASSET, 100e18, STABLE);
   }
 
@@ -479,22 +497,22 @@ contract LendingPoolDataProviderTest is Test {
 
   // === Input guards
   function test_validateBorrow_zeroUser_reverts() external {
-    vm.expectRevert('LDP: INVALID_USER');
+    vm.expectRevert(abi.encodeWithSelector(InvalidUser.selector));
     dp.validateBorrow(address(0), DAI_ASSET, 100e18, VARIABLE);
   }
 
   function test_validateBorrow_zeroReserve_reverts() external {
-    vm.expectRevert('LDP: INVALID_RESERVE');
+    vm.expectRevert(abi.encodeWithSelector(InvalidReserve.selector));
     dp.validateBorrow(USER, address(0), 100e18, VARIABLE);
   }
 
   function test_validateBorrow_zeroAmount_reverts() external {
-    vm.expectRevert('LDP: ZERO_AMOUNT');
+    vm.expectRevert(abi.encodeWithSelector(ZeroAmount.selector));
     dp.validateBorrow(USER, DAI_ASSET, 0, VARIABLE);
   }
 
   function test_validateBorrow_invalidRateMode_reverts() external {
-    vm.expectRevert('LDP: INVALID_RATE_MODE');
+    vm.expectRevert(abi.encodeWithSelector(InvalidRateMode.selector, uint256(99)));
     dp.validateBorrow(USER, DAI_ASSET, 100e18, 99);
   }
 

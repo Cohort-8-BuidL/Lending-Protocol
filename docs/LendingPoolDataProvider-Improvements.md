@@ -21,7 +21,9 @@ Reviewed areas:
 
 ### 1.1 Replace revert strings with custom errors
 
-Current code uses string-based `require` messages such as:
+**Status:** Implemented in `src/LendingPoolDataProvider.sol` (file-level `error` declarations; `if`/`revert` instead of string `require`).
+
+Previously the contract used string-based `require` messages such as:
 
 - `LDP: INVALID_USER`
 - `LDP: STALE_ORACLE`
@@ -54,13 +56,15 @@ if (user == address(0)) revert InvalidUser();
 
 ### 1.2 Add reserve context for oracle/config failures
 
+**Status:** Implemented — `StaleOracle`, `InvalidLtv`, and `InvalidLiquidationThreshold` carry the offending `reserve` (and values where relevant).
+
 When stale oracle or invalid config is detected during reserve iteration, include reserve address in error arguments for easier debugging and monitoring.
 
-Suggested errors:
+Errors:
 
-- `error StaleOracle(address reserve);`
-- `error InvalidLtv(address reserve, uint256 ltv);`
-- `error InvalidLiquidationThreshold(address reserve, uint256 liquidationThreshold);`
+- `StaleOracle(address reserve)`
+- `InvalidLtv(address reserve, uint256 ltv)`
+- `InvalidLiquidationThreshold(address reserve, uint256 liquidationThreshold)`
 
 ### 1.3 Add explicit decimal bounds checks
 
@@ -165,4 +169,10 @@ Implement changes in this order:
 2. Refactor `_toEthValue` and `calculateHealthFactor` to use safe mul/div.
 3. Apply loop gas micro-optimizations and run tests/benchmarks.
 4. Optionally add invariant enforcement for reserve configuration.
+
+---
+
+## Related documentation
+
+- [LendingPoolDataProvider — Threat model and mitigations](./LendingPoolDataProvider-Security.md)
 

@@ -6,6 +6,24 @@ import {IPoolLike} from './interfaces/IPoolLike.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {WadRayMath} from './libraries/WadRayMath.sol';
 
+/// @dev Custom errors replace string reverts for smaller bytecode and lower revert gas.
+error InvalidPool();
+error InvalidUser();
+error InvalidReserve();
+error ZeroAmount();
+error InvalidRateMode(uint256 rateMode);
+error OracleNotSet();
+error StaleOracle(address reserve);
+error InvalidLtv(address reserve, uint256 ltv);
+error InvalidLiquidationThreshold(address reserve, uint256 liquidationThreshold);
+error ReserveInactive();
+error BorrowingDisabled();
+error StableBorrowingDisabled();
+error InsufficientLiquidity();
+error CollateralInsufficient();
+error HealthFactorBelowOne();
+error StableBorrowManipulation();
+
 /// @title LendingPoolDataProvider
 /// @notice Computes user-level risk metrics (HF, LTV, available borrows) for
 ///         the lending/liquidation layers.
@@ -28,12 +46,11 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
   /// @dev Maximum sane value for BPS-denominated risk params (100.00%).
   uint256 internal constant MAX_BPS = 1e4;
 
-  // === Look for a way not to use an immutable pool
   IPoolLike public immutable pool;
 
   // === Constructor
   constructor(IPoolLike pool_) {
-    require(address(pool_) != address(0), 'LDP: INVALID_POOL');
+    if (address(pool_) == address(0)) revert InvalidPool();
     pool = pool_;
   }
 
@@ -55,7 +72,7 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
       uint256 healthFactor
     )
   {
-    require(user != address(0), 'LDP: INVALID_USER');
+    if (user == address(0)) revert InvalidUser();
 
     // Fetch shared context once — avoids redundant external calls.
     address[] memory reserves = pool.getReservesList();
@@ -91,8 +108,7 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
 
   /// @inheritdoc ILendingPoolDataProvider
   function getHealthFactor(address user) external view override returns (uint256) {
-    // LDP: LendingPoolData Provider
-    require(user != address(0), 'LDP: INVALID_USER');
+    if (user == address(0)) revert InvalidUser();
 
     address[] memory reserves = pool.getReservesList();
     IPriceOracle oracle = _getValidOracle();
@@ -111,7 +127,7 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
 
   /// @inheritdoc ILendingPoolDataProvider
   function getAverageLtv(address user) external view override returns (uint256) {
-    require(user != address(0), 'LDP: INVALID_USER');
+    if (user == address(0)) revert InvalidUser();
 
     address[] memory reserves = pool.getReservesList();
     IPriceOracle oracle = _getValidOracle();
@@ -122,7 +138,7 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
 
   /// @inheritdoc ILendingPoolDataProvider
   function getAverageLiquidationThreshold(address user) external view override returns (uint256) {
-    require(user != address(0), 'LDP: INVALID_USER');
+    if (user == address(0)) revert InvalidUser();
 
     address[] memory reserves = pool.getReservesList();
     IPriceOracle oracle = _getValidOracle();
@@ -133,7 +149,7 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
 
   /// @inheritdoc ILendingPoolDataProvider
   function getTotalFeesETH(address user) external view override returns (uint256) {
-    require(user != address(0), 'LDP: INVALID_USER');
+    if (user == address(0)) revert InvalidUser();
 
     address[] memory reserves = pool.getReservesList();
     IPriceOracle oracle = _getValidOracle();
@@ -147,8 +163,8 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
     address user,
     address reserve
   ) external view override returns (uint256) {
-    require(user != address(0), 'LDP: INVALID_USER');
-    require(reserve != address(0), 'LDP: INVALID_RESERVE');
+    if (user == address(0)) revert InvalidUser();
+    if (reserve == address(0)) revert InvalidReserve();
     return pool.getUserCompoundedBorrowBalance(user, reserve);
   }
 
@@ -177,7 +193,6 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
 
     // Numerator: collateral(WAD) * threshold(BPS) * RAY
     // Max realistic: 1e9 ETH * 1e18 * 10000 * 1e27 = 1e58 — fits in uint256.
-    // WadRayMath.mulDiv used for the final cross-precision step.
     uint256 collateralAdjusted = (totalCollateralETH * liquidationThreshold) / BPS;
     return (collateralAdjusted * RAY) / debtWithFeesETH;
   }
@@ -218,7 +233,7 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
 
       // Fetch price — revert if stale/zero for any active position (fixes #10).
       uint256 price = oracle.getAssetPrice(reserve);
-      require(price != 0, 'LDP: STALE_ORACLE');
+      if (price == 0) revert StaleOracle(reserve);
 
       uint8 decimals = pool.getReserveDecimals(reserve);
 
@@ -229,8 +244,8 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
         IPoolLike.ReserveConfiguration memory cfg = pool.getReserveConfiguration(reserve);
 
         // Bounds-check reserve config (fixes #18).
-        require(cfg.ltv <= MAX_BPS, 'LDP: INVALID_LTV');
-        require(cfg.liquidationThreshold <= MAX_BPS, 'LDP: INVALID_LT');
+        if (cfg.ltv > MAX_BPS) revert InvalidLtv(reserve, cfg.ltv);
+        if (cfg.liquidationThreshold > MAX_BPS) revert InvalidLiquidationThreshold(reserve, cfg.liquidationThreshold);
 
         vars.totalCollateralETH += collateralETH;
         // Safe: collateralETH(WAD) * ltv(<=10000) — max ~1e22 per reserve.
@@ -318,13 +333,12 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
     uint256 amount,
     uint256 rateMode
   ) external view override {
-    require(user != address(0), 'LDP: INVALID_USER');
-    require(reserve != address(0), 'LDP: INVALID_RESERVE');
-    require(amount != 0, 'LDP: ZERO_AMOUNT');
-    require(
-      rateMode == RATE_MODE_STABLE || rateMode == RATE_MODE_VARIABLE,
-      'LDP: INVALID_RATE_MODE'
-    );
+    if (user == address(0)) revert InvalidUser();
+    if (reserve == address(0)) revert InvalidReserve();
+    if (amount == 0) revert ZeroAmount();
+    if (rateMode != RATE_MODE_STABLE && rateMode != RATE_MODE_VARIABLE) {
+      revert InvalidRateMode(rateMode);
+    }
 
     // Checks 1-3: reserve flags + liquidity (no oracle needed).
     _validateReserveChecks(reserve, amount, rateMode);
@@ -336,14 +350,14 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
   /// @dev Checks 1-3: reserve must be active, borrowing enabled, stable enabled if applicable, and requested amount within available liquidity.
   function _validateReserveChecks(address reserve, uint256 amount, uint256 rateMode) internal view {
     IPoolLike.ReserveFlags memory flags = pool.getReserveFlags(reserve);
-    require(flags.isActive, 'LDP: RESERVE_INACTIVE');
-    require(flags.borrowingEnabled, 'LDP: BORROWING_DISABLED');
+    if (!flags.isActive) revert ReserveInactive();
+    if (!flags.borrowingEnabled) revert BorrowingDisabled();
 
     if (rateMode == RATE_MODE_STABLE) {
-      require(flags.stableBorrowingEnabled, 'LDP: STABLE_BORROWING_DISABLED');
+      if (!flags.stableBorrowingEnabled) revert StableBorrowingDisabled();
     }
 
-    require(amount <= pool.getReserveAvailableLiquidity(reserve), 'LDP: INSUFFICIENT_LIQUIDITY');
+    if (amount > pool.getReserveAvailableLiquidity(reserve)) revert InsufficientLiquidity();
   }
 
   /// @dev Checks 4-6: collateral capacity, post-borrow HF, stable manipulation.
@@ -355,7 +369,7 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
   ) internal view {
     IPriceOracle oracle = _getValidOracle();
     uint256 price = oracle.getAssetPrice(reserve);
-    require(price != 0, 'LDP: STALE_ORACLE');
+    if (price == 0) revert StaleOracle(reserve);
 
     uint8 decimals = pool.getReserveDecimals(reserve);
     uint256 borrowAmountETH = _toEthValue(amount, price, decimals);
@@ -374,18 +388,17 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
       vars.totalBorrowsETH,
       vars.totalFeesETH
     );
-    require(available >= borrowAmountETH, 'LDP: COLLATERAL_INSUFFICIENT');
+    if (available < borrowAmountETH) revert CollateralInsufficient();
 
     // Check 5: post-borrow HF >= 1 ray.
-    require(
+    if (
       calculateHealthFactor(
         vars.totalCollateralETH,
         vars.totalBorrowsETH + borrowAmountETH,
         vars.totalFeesETH,
         avgLt
-      ) >= RAY,
-      'LDP: HF_BELOW_ONE'
-    );
+      ) < RAY
+    ) revert HealthFactorBelowOne();
 
     // Check 6: stable rate anti-manipulation.
     if (rateMode == RATE_MODE_STABLE) {
@@ -405,10 +418,7 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
     if (!pool.isUserUsingReserveAsCollateral(user, reserve)) return;
     uint256 bal = pool.getUserCollateralBalance(user, reserve);
     if (bal == 0) return;
-    require(
-      _toEthValue(bal, price, decimals) <= borrowAmountETH,
-      'LDP: STABLE_BORROW_MANIPULATION'
-    );
+    if (_toEthValue(bal, price, decimals) > borrowAmountETH) revert StableBorrowManipulation();
   }
 
   // === Internal:oracle validation
@@ -416,6 +426,6 @@ contract LendingPoolDataProvider is ILendingPoolDataProvider {
   /// @dev Fetches the oracle and validates it is not the zero address.
   function _getValidOracle() internal view returns (IPriceOracle oracle) {
     oracle = pool.getPriceOracle();
-    require(address(oracle) != address(0), 'LDP: ORACLE_NOT_SET');
+    if (address(oracle) == address(0)) revert OracleNotSet();
   }
 }
