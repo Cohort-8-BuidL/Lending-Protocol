@@ -76,6 +76,7 @@ contract LendingPoolCore {
 
     event ReserveInterestRateStrategyChanged(address indexed asset, address strategy);
     event ReserveConfigurationUpdated(address indexed asset, uint256 configurationData);
+    event PriceOracleUpdated(address indexed oldOracle, address indexed newOracle);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constants
@@ -93,6 +94,9 @@ contract LendingPoolCore {
 
     address public immutable lendingPool;
     address public immutable lendingPoolConfigurator;
+
+    /// @dev Price oracle address — set by Configurator, readable by any contract.
+    address public priceOracle;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Reserve state
@@ -290,6 +294,18 @@ contract LendingPoolCore {
     // ─────────────────────────────────────────────────────────────────────────
     // Configuration setters  (Configurator only)
     // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @notice Updates the protocol price oracle address.
+     * @dev    Only the Configurator (governance-controlled) may call this.
+     *         Change takes effect on the next block — acceptance criterion 38.
+     */
+    function setPriceOracle(address newOracle) external onlyConfigurator {
+        if (newOracle == address(0)) revert ZeroAddress();
+        address old = priceOracle;
+        priceOracle = newOracle;
+        emit PriceOracleUpdated(old, newOracle);
+    }
 
     function setReserveConfiguration(address asset, uint256 configData) external onlyConfigurator {
         _getInitializedReserve(asset).configuration.data = configData;
