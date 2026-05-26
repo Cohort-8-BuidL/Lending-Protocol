@@ -1,0 +1,406 @@
+
+# GLOBAL OS FILES
+
+# Linux
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+*.icloud
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# EDITORS & IDEs
+
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.vscode-test
+.history
+*.vsix
+
+# JetBrains / IntelliJ
+.idea/*
+!.idea/codeStyles
+!.idea/runConfigurations
+*.iml
+modules.xml
+*.ipr
+*.iws
+
+# Sublime
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+Package Control.cache/
+Package Control.ca-certs/
+Package Control.ca-bundle
+Package Control.merged-ca-bundle
+Package Control.user-ca-bundle
+oscrypto-ca-bundle.crt
+bh_unicode_properties.cache
+GitHub.sublime-settings
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+Session.vim
+Sessionx.vim
+.netrwhist
+[._]*.un~
+
+
+# VERSION CONTROL
+
+
+*.orig
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+*_BACKUP_*.txt
+*_BASE_*.txt
+*_LOCAL_*.txt
+*_REMOTE_*.txt
+
+
+# ENVIRONMENT & SECRETS (SECURITY HARDENED)
+
+
+.env
+.env.*
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
+.env.test
+
+# Private keys / crypto material
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.csr
+
+# Wallet / keystore
+keystore/
+wallets/
+*.keystore
+*.mnemonic
+
+# SSH
+**/.ssh/id_*
+**/.ssh/*_id_*
+**/.ssh/known_hosts
+
+
+# NODE / JS / TS
+
+
+node_modules/
+.npm
+.pnp
+.pnp.js
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+.parcel-cache
+.nyc_output
+.eslintcache
+.stylelintcache
+
+coverage/
+*.lcov
+*.tsbuildinfo
+package-lock.json
+
+
+# NEXT.JS
+
+.next/
+out/
+.vercel
+.next/cache
+
+
+# NUXT
+
+
+.nuxt
+.nuxt-*
+.output
+.gen
+dist/
+
+
+# REMIX
+
+.cache
+/public/build
+
+
+# RUST
+
+target/
+debug/
+**/*.rs.bk
+rust-project.json
+
+# Rust test artifacts
+*.profraw
+*.profdata
+
+
+# SOLIDITY / WEB3
+
+# Hardhat
+artifacts/
+cache/
+typechain/
+coverage/
+
+# Foundry
+out/
+broadcast/
+forge-cache/
+
+# Truffle
+build
+build_webpack
+.truffle-solidity-loader
+blockchain/geth/**
+blockchain/keystore/**
+blockchain/history
+
+# Geth
+/geth
+/keystore
+history
+
+# ABI exports
+*.abi
+*.bin
+
+
+# REDIS
+
+dump.rdb
+*.rdb
+
+# DATABASES
+
+*.accdb
+*.db
+*.dbf
+*.mdb
+*.sqlite3
+*.db-shm
+*.db-wal
+*.mdf
+*.ldf
+*.ndf
+
+
+# PYTHON / DJANGO
+
+__pycache__/
+*.py[cod]
+*.so
+.venv
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+db.sqlite3
+media/
+
+
+# GO
+
+*.test
+go.work
+
+
+# JAVA
+
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+
+# C# / .NET
+
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.user
+*.suo
+*.pdb
+*.cache
+.vs/
+
+
+# FLUTTER / DART
+
+.dart_tool/
+.packages
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+doc/api/
+
+
+# LARAVEL / PHP
+
+/vendor/
+storage/*.key
+public/storage
+public/hot
+.phpunit.result.cache
+
+
+# RUBY / RAILS
+
+*.gem
+.bundle
+/vendor/bundle
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+
+# WORDPRESS
+
+/wp-admin/
+/wp-includes/
+/wp-content/uploads/
+wp-config.php
+.htaccess
+
+
+# BUILD OUTPUT / GENERIC
+
+bin/
+obj/
+build/
+dist/
+out/
+coverage/
+*.log
+*.tmp
+*.cache
+*.pid
+*.seed
+*.tgz
+
+
+# LIGHTHOUSECI
+.lighthouseci/
+
+
+# DOCKER
+
+
+# Docker overrides & local configs
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.*.local.yml
+
+# Environment files often used by docker
+.docker.env
+.env.docker
+.env.docker.local
+
+# Docker runtime / temp
+*.pid
+*.cid
+*.sock
+
+# Docker logs
+docker.log
+docker-*.log
+
+# Build cache / context
+.docker/
+docker-data/
+docker-tmp/
+
+# PACKAGE MANAGERS
+
+# NPM
+package-lock.json
+
+# PNPM
+
+# Yarn
+.yarn/
+.yarn-cache/
+.yarnrc.yml
+.pnp.*
+.yarn-integrity
+
+# Bun
+bun.lockb
+
+# Turborepo
+.turbo/
+
+# Go
+go.sum
+
+# Java / Gradle
+.gradle/
+gradle-app.setting
+
+
+# Solidity
+artifacts
+cache
+out
+node_modules
+dist
+
